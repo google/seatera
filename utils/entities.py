@@ -7,8 +7,8 @@ class RunSettings:
         self.end_date = end_date
         self.accounts = accounts
     
-    @classmethod
-    def from_sheet_read(cls, input: List[List[str]]):
+    @staticmethod
+    def from_sheet_read(input: List[List[str]]):
         thresholds = {}
         start_date = ''
         end_date = ''
