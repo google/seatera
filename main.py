@@ -4,6 +4,7 @@ from pprint import pprint
 from utils.auth import CONFIG_FILE, SCOPES
 from utils.sheets import SheetsInteractor, get_sheets_service
 from utils.ads_searcher import AccountsBuilder
+from utils.entities import RunSettings
 from typing import Dict, Any, Optional, Union
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
@@ -16,13 +17,10 @@ _THRESHOLDS_RANGE = 'Thresholds!A2:B12'
 def main(client: GoogleAdsClient, mcc_id: str, config: Dict[str, Any]):
     sheets_service = get_sheets_service(config)
     sheet_handler = SheetsInteractor(sheets_service, config['spreadsheet_url'])
-    th = sheet_handler.read_from_spreadsheet(_THRESHOLDS_RANGE)
+    run_settings = RunSettings.from_sheet_read(sheet_handler.read_from_spreadsheet(_THRESHOLDS_RANGE))
     
-    accounts = config['accounts']
-    if not accounts:
-        accounts = AccountsBuilder(client).get_accounts()
-
-    pprint(accounts)
+    if not run_settings.accounts:
+        run_settings.accounts = AccountsBuilder(client).get_accounts()
 
 
 if __name__ == "__main__":
