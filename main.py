@@ -41,7 +41,7 @@ if __name__ == "__main__":
     try:
         google_ads_client = GoogleAdsClient.load_from_storage(CONFIG_FILE)
     except:
-        print('Refer to README.md and fill out values in google-ads.yaml')
+        print('Refer to README.md and fill out values in config.yaml')
         sys.exit(1)
 
     mcc_id = str(config['login_customer_id'])
