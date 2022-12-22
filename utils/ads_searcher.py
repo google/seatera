@@ -1,6 +1,3 @@
-from dateutil.parser import parse
-from google.ads.googleads.client import GoogleAdsClient
-
 
 class Builder(object):
     def __init__(self, client, customer_id):
@@ -23,14 +20,17 @@ class Builder(object):
 class SearchTermBuilder(Builder):
     """Gets Keywords recommednations from a single account."""
 
-    def build(self, params):
+    def build(self, thresholds, start_date, end_date):
         query = f"""
             SELECT 
                 search_term_view.search_term,
                 customer.descriptive_name,
+                customer.id,
                 customer.currency_code,
                 campaign.name,
+                campaign.id,
                 ad_group.name,
+                ad_group.id,
                 metrics.clicks,
                 metrics.impressions,
                 metrics.ctr,
@@ -39,63 +39,107 @@ class SearchTermBuilder(Builder):
             FROM 
                 search_term_view 
             WHERE 
-                campaign.advertising_channel_type = 'SHOPPING' 
-                AND metrics.clicks >= {params['clicks']} 
-                AND metrics.impressions >= {params['impressions']} 
-                AND metrics.ctr > {params['ctr']} 
-                AND metrics.average_cpc > {params['average_cpc']}
-                AND metrics.cost_micros > {params['cost_micros']} 
-                AND metrics.conversions > {params['conversions']}
+                campaign.advertising_channel_type = 'SEARCH' 
+                AND metrics.clicks >= {thresholds['clicks']} 
+                AND metrics.impressions >= {thresholds['impressions']} 
+                AND metrics.ctr > {thresholds['ctr']} 
+                AND metrics.cost_micros > {thresholds['cost']} 
+                AND metrics.conversions > {thresholds['conversions']}
+                AND segments.date BETWEEN '{start_date}' AND '{end_date}'
         """
-
-        if params.get('start_date') and params.get('end_date'):
-            if parse(params['start_date']) <= parse(params['end_date']):
-                query += f" AND segments.date BETWEEN '{params['start_date']}' AND '{params['end_date']}'" 
-            else:
-                logging.info('Given end date is sooner than start date. Running for default dates.')
-        else: 
-            logging.info('Did not get date range. Running for default dates.')
 
         rows = self._get_rows(query)   
         search_terms = {}
         for batch in rows:
             for row in batch.results:
-                print(row)
-                search_terms[row.search_term_view.search_term] = {
-                    'account' : row.customer.descriptive_name,
-                    'campaign' : row.campaign.name,
-                    'ad group': row.ad_group.name,
-                    'clicks': row.metrics.clicks,
-                    'impressions': row.metrics.impressions,
-                    'conversions': row.metrics.conversions,
-                    'ctr': row.metrics.ctr * 100,
-                    'currency' : row.customer.currency_code,
-                    'cost': row.metrics.cost_micros / 1000000,
-                    'average_cpc': row.metrics.average_cpc
-                }
+                try:
+                    search_terms[row.search_term_view.search_term]['ad_groups'].append(row.ad_group.id)
+                    search_terms[row.search_term_view.search_term]['stat'][row.ad_group.id] = {
+                            'campaign' : row.campaign.name,
+                            'campaign_id' : row.campaign.id,
+                            'ad_group': row.ad_group.name,
+                            'ad_group_id' : row.ad_group.id,
+                            'clicks': row.metrics.clicks,
+                            'impressions': row.metrics.impressions,
+                            'conversions': row.metrics.conversions,
+                            'ctr': row.metrics.ctr * 100,
+                            'cost': row.metrics.cost_micros / 1000000
+                    }
+
+                except KeyError:
+                    search_terms[row.search_term_view.search_term] = {
+                        'ad_groups': [row.ad_group.id],
+                        'account_id': row.customer.id,
+                        'account' : row.customer.descriptive_name,
+                        'currency' : row.customer.currency_code,
+                        'stats': {
+                            row.ad_group.id: {
+                                'campaign' : row.campaign.name,
+                                'campaign_id' : row.campaign.id,
+                                'ad_group': row.ad_group.name,
+                                'ad_group_id' : row.ad_group.id,
+                                'clicks': row.metrics.clicks,
+                                'impressions': row.metrics.impressions,
+                                'conversions': row.metrics.conversions,
+                                'ctr': row.metrics.ctr * 100,
+                                'cost': row.metrics.cost_micros / 1000000
+                            }
+                        }
+                    }
                 
         return search_terms
 
 
-class KeywordRemoverBuilder(Builder):
-    """Gets Keywords from a single account."""
+class KeywordDedupingBuilder(Builder):
+    """Gets Keywords from a single account, removes if from search term dict if
+    KW exist in the same ad group. If exist in a different ad group, adds to exclusion list with
+    to be add as negative kw in the st's original ad group."""
 
     def build(self, search_terms):
         rows = self._get_rows('''
         SELECT
-            ad_group_criterion.keyword.text
+            ad_group_criterion.keyword.text,
+            ad_group.id
         FROM 
             ad_group_criterion
         WHERE 
             ad_group_criterion.type = KEYWORD
+        AND
+            ad_group_criterion.status IN ('ENABLED', 'PAUSED')
+        AND
+            campaign.advertising_channel_type = 'SEARCH'
         ''')
-
+        
+        # Create a dict of keywords that appear in the search term list
+        # and all the ad groups they exist in
+        keywords = {}
         for batch in rows:
             for row in batch.results:
+                # if keyword is not in search term dict, move on to the next one
+                if not search_terms.get(row.ad_group_criterion.keyword.text):
+                    continue
                 try:
-                    search_terms.pop(row.ad_group_criterion.keyword.text)
-                except:
-                    pass
+                    keywords[row.ad_group_criterion.keyword.text].append(row.ad_group.id)
+                except KeyError:
+                    keywords[row.ad_group_criterion.keyword.text] = [row.ad_group.id]
+
+        # Create exclusion dict of negative keywords. Will have search terms 
+        # that appear in other ad groups as keywords. 
+        exclusion_list = {}
+        for kw, kw_ags in keywords.items():
+            st = search_terms[kw]
+            exclusion_ags = []
+            for ag in kw_ags:
+                if ag in st['ad_groups']:
+                    st['ad_groups'].remove(ag)
+    
+            # Add st ad groups remain, add them and kw to exclusion list.
+            if st['ad_groups']:
+                exclusion_list[kw] = st['ad_groups']
+
+            search_terms.pop(kw)
+
+        return exclusion_list
 
 
 class AccountsBuilder(Builder):

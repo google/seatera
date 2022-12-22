@@ -9,9 +9,12 @@ class RunSettings:
             raise ValueError("End Date must be later than Start Date") 
 
         self.thresholds = thresholds
-        self.start_date = parse(start_date)
-        self.end_date = parse(end_date)
+        self.start_date = parse(start_date).strftime("%Y-%m-%d")
+        self.end_date = parse(end_date).strftime("%Y-%m-%d")
         self.accounts = accounts
+
+        # Convert cost to cost micros
+        self.thresholds['cost'] = str(int(self.thresholds['cost']) * 1000000)
     
     @staticmethod
     def from_sheet_read(input: List[List[str]]):
@@ -35,7 +38,10 @@ class RunSettings:
                 accounts = value
 
             else:
-                thresholds[key] = int(value)
-            
+                thresholds[key] = value
+
         return RunSettings(thresholds, start_date, end_date, accounts.split(','))
 
+
+    def __repr__(self) -> str:
+        return f'RunSettings("{self.thresholds}", "{self.start_date}", "{self.end_date}", "{self.accounts}")'
