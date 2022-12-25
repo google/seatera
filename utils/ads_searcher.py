@@ -160,6 +160,7 @@ class AccountsBuilder(Builder):
           customer_client
         WHERE
           customer_client.manager = False
+        AND customer_client.status = 'ENABLED'
     	'''
 
         rows = self._get_rows(query)

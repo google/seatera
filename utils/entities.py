@@ -35,12 +35,15 @@ class RunSettings:
             elif key == 'end_date':
                 end_date = value
             elif key == 'accounts':
-                accounts = value
+                if not value:
+                    accounts =[]
+                else:
+                    accounts = str(value).split(',')
 
             else:
                 thresholds[key] = value
 
-        return RunSettings(thresholds, start_date, end_date, accounts.split(','))
+        return RunSettings(thresholds, start_date, end_date, accounts)
 
 
     def __repr__(self) -> str:
