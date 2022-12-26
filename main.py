@@ -1,16 +1,18 @@
 import sys
 import logging
 import utils.auth as auth
+from argparse import ArgumentParser
 from pathlib import Path
 from pprint import pprint
 from utils.auth import CONFIG_FILE, SCOPES
 from utils.sheets import SheetsInteractor, get_sheets_service
 from utils.ads_searcher import AccountsBuilder, SearchTermBuilder, KeywordDedupingBuilder
+from utils.ads_mutator import NegativeKeywordsUploader
 from utils.entities import RunSettings
 from typing import Dict, Any, Optional, Union
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
-
+from time import time
 
 _THRESHOLDS_RANGE = 'Thresholds!A2:B12'
 _LOGS_PATH = Path('./script.log')
@@ -19,6 +21,14 @@ logging.basicConfig(filename=_LOGS_PATH,
                     level=logging.INFO,
                     format='%(asctime)s:%(levelname)s:%(message)s')
 
+parser = ArgumentParser(
+    description='Extract keywords and negative keywords from your search terms.')
+parser.add_argument('-e', '--upload-negatives', default=False, action='store_true',
+                   help='Use this flag if you want to automatically add the negative keywords to the ad groups.')
+parser.add_argument('-u', '--upload-negatives-from-sheet', default=False, action='store_true',
+                   help='Use this flag to read the "exclusions" sheet and upload them as negative keywords. This will do no other processing.')
+arguments = parser.parse_args()
+
 
 def _get_search_terms(client: GoogleAdsClient, run_settings: RunSettings, account: str) -> Dict[str, Dict[str, Any]]:
     """Uses the SearchTermBuilder class to get all Search Terms from A specific account"""
@@ -26,26 +36,57 @@ def _get_search_terms(client: GoogleAdsClient, run_settings: RunSettings, accoun
     return builder.build(run_settings.thresholds, run_settings.start_date, run_settings.end_date)
 
 
-def main(client: GoogleAdsClient, mcc_id: str, config: Dict[str, Any]):
-    sheets_service = get_sheets_service(config)
-    sheet_handler = SheetsInteractor(sheets_service, config['spreadsheet_url'])
-    run_settings = RunSettings.from_sheet_read(sheet_handler.read_from_spreadsheet(_THRESHOLDS_RANGE))
+def _dedup_and_get_exclusions(client: GoogleAdsClient, run_settings: RunSettings, account: str, search_terms: Dict[str, Any]):
+    """Removes existing keywords froms search term dict and return an exclusion list"""
+    kw_builder = KeywordDedupingBuilder(client, account)
+    return kw_builder.build(search_terms)
 
-    pprint(run_settings)
+
+def _add_negative_keywords(client, account, neg_kw):
+    builder = NegativeKeywordsUploader(client, account)
+    builder.upload_from_script(neg_kw)
+
+
+def upload_from_sheets(client, sheet_handler):
+    pass
+
+
+def main(client: GoogleAdsClient, mcc_id: str, config: Dict[str, Any], sheet_handler: SheetsInteractor, auto_upload_negatives: bool):
+
+    run_settings = RunSettings.from_sheet_read(sheet_handler.read_from_spreadsheet(_THRESHOLDS_RANGE))
 
     if not run_settings.accounts:
         run_settings.accounts = AccountsBuilder(client).get_accounts()
 
-    exclusions = {}
-    search_terms = {}
-    for account in run_settings.accounts:
-        search_terms.update(_get_search_terms(client, run_settings, account))
+    pprint(run_settings)
 
-    kw_builder = KeywordDedupingBuilder(client, run_settings.accounts[0])
-    exclusion_list = kw_builder.build(search_terms)
+    keyword_recommendations = {}
+    exclusion_recommendations = {}
+    for account in run_settings.accounts:
+        search_terms =_get_search_terms(client, run_settings, account)
+        exclusions = _dedup_and_get_exclusions(client, run_settings, account, search_terms)
+        if search_terms:
+            keyword_recommendations[account] = search_terms
+        if exclusions:
+            exclusion_recommendations[account] = exclusions
+    
+    pprint(keyword_recommendations)
+    pprint(exclusion_recommendations)
+
+    # If auto upload, iterate over exclusion dict and for each account add negative kws
+    if auto_upload_negatives:
+        for account, neg_kw in exclusion_recommendations.items():
+            _add_negative_keywords(client, account, neg_kw)
+    
+    #TODO: Write to spreadsheet suggestions and exclusions
 
 
 if __name__ == "__main__":
+    start = time()
+
+    auto_upload_negatives = arguments.upload_negatives
+    upload_negatives_from_sheets = arguments.upload_negatives_from_sheet
+
     config = auth.get_config(CONFIG_FILE) 
     # Check if client needs to set refresh_token in YAML.
     # If so, run auth_utils.py.
@@ -59,5 +100,15 @@ if __name__ == "__main__":
         sys.exit(1)
 
     mcc_id = str(config['login_customer_id'])
+    sheets_service = get_sheets_service(config)
+    sheet_handler = SheetsInteractor(sheets_service, config['spreadsheet_url'])
     
-    main(google_ads_client, mcc_id, config)
+    if upload_negatives_from_sheets:
+        upload_from_sheets(google_ads_client, sheet_handler)
+
+    main(google_ads_client, mcc_id, config, sheet_handler ,auto_upload_negatives)
+    # _add_negative_keywords(google_ads_client, '9489090398')
+
+    end = time()
+    total_time = end - start
+    print("\n" + "Total run time: " + str(total_time))
