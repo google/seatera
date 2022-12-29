@@ -5,7 +5,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 from pprint import pprint
 from utils.auth import CONFIG_FILE, SCOPES
-from utils.sheets import SheetsInteractor, get_sheets_service
+from utils.sheets import SheetsInteractor, get_sheets_service, flatten_data
 from utils.ads_searcher import AccountsBuilder, SearchTermBuilder, KeywordDedupingBuilder
 from utils.ads_mutator import NegativeKeywordsUploader
 from utils.entities import RunSettings
@@ -16,6 +16,8 @@ from time import time
 
 _THRESHOLDS_RANGE = 'Thresholds!A2:B12'
 _LOGS_PATH = Path('./script.log')
+_KEYWORDS_SHEET = 'Keywords'
+_EXCLUSIONS_SHEET = 'Exclusions'
 
 logging.basicConfig(filename=_LOGS_PATH,
                     level=logging.INFO,
@@ -58,7 +60,7 @@ def main(client: GoogleAdsClient, mcc_id: str, config: Dict[str, Any], sheet_han
     if not run_settings.accounts:
         run_settings.accounts = AccountsBuilder(client).get_accounts()
 
-    pprint(run_settings)
+    logging.info(run_settings)
 
     keyword_recommendations = {}
     exclusion_recommendations = {}
@@ -78,37 +80,45 @@ def main(client: GoogleAdsClient, mcc_id: str, config: Dict[str, Any], sheet_han
         for account, neg_kw in exclusion_recommendations.items():
             _add_negative_keywords(client, account, neg_kw)
     
-    #TODO: Write to spreadsheet suggestions and exclusions
+    flattened_kw_recommendations = flatten_data(keyword_recommendations)
+    flattened_exclusion_recommendations = flatten_data(exclusion_recommendations)
+
+    sheet_handler.write_to_spreadsheet(
+        {_KEYWORDS_SHEET: flattened_kw_recommendations,
+         _EXCLUSIONS_SHEET: flattened_exclusion_recommendations})
 
 
 if __name__ == "__main__":
     start = time()
-
-    auto_upload_negatives = arguments.upload_negatives
-    upload_negatives_from_sheets = arguments.upload_negatives_from_sheet
-
-    config = auth.get_config(CONFIG_FILE) 
-    # Check if client needs to set refresh_token in YAML.
-    # If so, run auth_utils.py.
-    if config['refresh_token'] == None:
-        auth.main()
-    
     try:
-        google_ads_client = GoogleAdsClient.load_from_storage(CONFIG_FILE)
-    except:
-        print('Refer to README.md and fill out values in config.yaml')
-        sys.exit(1)
+        auto_upload_negatives = arguments.upload_negatives
+        upload_negatives_from_sheets = arguments.upload_negatives_from_sheet
 
-    mcc_id = str(config['login_customer_id'])
-    sheets_service = get_sheets_service(config)
-    sheet_handler = SheetsInteractor(sheets_service, config['spreadsheet_url'])
-    
-    if upload_negatives_from_sheets:
-        upload_from_sheets(google_ads_client, sheet_handler)
+        config = auth.get_config(CONFIG_FILE) 
+        # Check if client needs to set refresh_token in YAML.
+        # If so, run auth_utils.py.
+        if config['refresh_token'] == None:
+            auth.main()
+        
+        try:
+            google_ads_client = GoogleAdsClient.load_from_storage(CONFIG_FILE)
+        except:
+            print('Refer to README.md and fill out values in config.yaml')
+            sys.exit(1)
 
-    main(google_ads_client, mcc_id, config, sheet_handler ,auto_upload_negatives)
-    # _add_negative_keywords(google_ads_client, '9489090398')
+        mcc_id = str(config['login_customer_id'])
+        sheets_service = get_sheets_service(config)
+        sheet_handler = SheetsInteractor(sheets_service, config['spreadsheet_url'])
+        
+        if upload_negatives_from_sheets:
+            upload_from_sheets(google_ads_client, sheet_handler)
 
-    end = time()
-    total_time = end - start
-    print("\n" + "Total run time: " + str(total_time))
+        main(google_ads_client, mcc_id, config, sheet_handler ,auto_upload_negatives)
+
+    except Exception as e:
+        logging.exception(e)
+        pprint('Run did not complete succesfully. Refer to logs.')
+    finally:
+        end = time()
+        total_time = end - start
+        print("\n" + "Total run time: " + str(total_time))

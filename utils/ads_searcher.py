@@ -53,8 +53,9 @@ class SearchTermBuilder(Builder):
         for batch in rows:
             for row in batch.results:
                 try:
-                    search_terms[row.search_term_view.search_term]['ad_groups'].append(row.ad_group.id)
-                    search_terms[row.search_term_view.search_term]['stat'][row.ad_group.id] = {
+                    search_terms[row.search_term_view.search_term][row.ad_group.id] = {
+                            'account_id': row.customer.id,
+                            'account' : row.customer.descriptive_name,
                             'campaign' : row.campaign.name,
                             'campaign_id' : row.campaign.id,
                             'ad_group': row.ad_group.name,
@@ -68,22 +69,18 @@ class SearchTermBuilder(Builder):
 
                 except KeyError:
                     search_terms[row.search_term_view.search_term] = {
-                        'ad_groups': [row.ad_group.id],
-                        'account_id': row.customer.id,
-                        'account' : row.customer.descriptive_name,
-                        'currency' : row.customer.currency_code,
-                        'stats': {
-                            row.ad_group.id: {
-                                'campaign' : row.campaign.name,
-                                'campaign_id' : row.campaign.id,
-                                'ad_group': row.ad_group.name,
-                                'ad_group_id' : row.ad_group.id,
-                                'clicks': row.metrics.clicks,
-                                'impressions': row.metrics.impressions,
-                                'conversions': row.metrics.conversions,
-                                'ctr': row.metrics.ctr * 100,
-                                'cost': row.metrics.cost_micros / 1000000
-                            }
+                        row.ad_group.id: {
+                            'account_id': row.customer.id,
+                            'account' : row.customer.descriptive_name,
+                            'campaign' : row.campaign.name,
+                            'campaign_id' : row.campaign.id,
+                            'ad_group': row.ad_group.name,
+                            'ad_group_id' : row.ad_group.id,
+                            'clicks': row.metrics.clicks,
+                            'impressions': row.metrics.impressions,
+                            'conversions': row.metrics.conversions,
+                            'ctr': row.metrics.ctr * 100,
+                            'cost': row.metrics.cost_micros / 1000000
                         }
                     }
                 
@@ -127,15 +124,13 @@ class KeywordDedupingBuilder(Builder):
         # that appear in other ad groups as keywords. 
         exclusion_list = {}
         for kw, kw_ags in keywords.items():
-            st = search_terms[kw]
-            exclusion_ags = []
+            st_stats = search_terms[kw]
             for ag in kw_ags:
-                if ag in st['ad_groups']:
-                    st['ad_groups'].remove(ag)
-    
-            # Add st ad groups remain, add them and kw to exclusion list.
-            if st['ad_groups']:
-                exclusion_list[kw] = st['ad_groups']
+                if st_stats.get(ag):
+                    st_stats.pop(ag)
+            # If st ad groups remain, add their stats and kw to exclusion list.
+            if st_stats:
+                exclusion_list[kw] = st_stats
 
             search_terms.pop(kw)
 
