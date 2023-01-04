@@ -16,7 +16,6 @@ class Builder(object):
         return response
 
 
-
 class SearchTermBuilder(Builder):
     """Gets Keywords recommednations from a single account."""
 
@@ -48,34 +47,34 @@ class SearchTermBuilder(Builder):
                 AND segments.date BETWEEN '{start_date}' AND '{end_date}'
         """
 
-        rows = self._get_rows(query)   
+        rows = self._get_rows(query)
         search_terms = {}
         for batch in rows:
             for row in batch.results:
                 try:
                     search_terms[row.search_term_view.search_term][row.ad_group.id] = {
-                            'account_id': row.customer.id,
-                            'account' : row.customer.descriptive_name,
-                            'campaign' : row.campaign.name,
-                            'campaign_id' : row.campaign.id,
-                            'ad_group': row.ad_group.name,
-                            'ad_group_id' : row.ad_group.id,
-                            'clicks': row.metrics.clicks,
-                            'impressions': row.metrics.impressions,
-                            'conversions': row.metrics.conversions,
-                            'ctr': row.metrics.ctr * 100,
-                            'cost': row.metrics.cost_micros / 1000000
+                        'account_id': row.customer.id,
+                        'account': row.customer.descriptive_name,
+                        'campaign': row.campaign.name,
+                        'campaign_id': row.campaign.id,
+                        'ad_group': row.ad_group.name,
+                        'ad_group_id': row.ad_group.id,
+                        'clicks': row.metrics.clicks,
+                        'impressions': row.metrics.impressions,
+                        'conversions': row.metrics.conversions,
+                        'ctr': row.metrics.ctr * 100,
+                        'cost': row.metrics.cost_micros / 1000000
                     }
 
                 except KeyError:
                     search_terms[row.search_term_view.search_term] = {
                         row.ad_group.id: {
                             'account_id': row.customer.id,
-                            'account' : row.customer.descriptive_name,
-                            'campaign' : row.campaign.name,
-                            'campaign_id' : row.campaign.id,
+                            'account': row.customer.descriptive_name,
+                            'campaign': row.campaign.name,
+                            'campaign_id': row.campaign.id,
                             'ad_group': row.ad_group.name,
-                            'ad_group_id' : row.ad_group.id,
+                            'ad_group_id': row.ad_group.id,
                             'clicks': row.metrics.clicks,
                             'impressions': row.metrics.impressions,
                             'conversions': row.metrics.conversions,
@@ -83,7 +82,7 @@ class SearchTermBuilder(Builder):
                             'cost': row.metrics.cost_micros / 1000000
                         }
                     }
-                
+
         return search_terms
 
 
@@ -106,7 +105,7 @@ class KeywordDedupingBuilder(Builder):
         AND
             campaign.advertising_channel_type = 'SEARCH'
         ''')
-        
+
         # Create a dict of keywords that appear in the search term list
         # and all the ad groups they exist in
         keywords = {}
@@ -116,12 +115,14 @@ class KeywordDedupingBuilder(Builder):
                 if not search_terms.get(row.ad_group_criterion.keyword.text):
                     continue
                 try:
-                    keywords[row.ad_group_criterion.keyword.text].append(row.ad_group.id)
+                    keywords[row.ad_group_criterion.keyword.text].append(
+                        row.ad_group.id)
                 except KeyError:
-                    keywords[row.ad_group_criterion.keyword.text] = [row.ad_group.id]
+                    keywords[row.ad_group_criterion.keyword.text] = [
+                        row.ad_group.id]
 
-        # Create exclusion dict of negative keywords. Will have search terms 
-        # that appear in other ad groups as keywords. 
+        # Create exclusion dict of negative keywords. Will have search terms
+        # that appear in other ad groups as keywords.
         exclusion_list = {}
         for kw, kw_ags in keywords.items():
             st_stats = search_terms[kw]

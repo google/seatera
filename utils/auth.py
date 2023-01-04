@@ -19,11 +19,13 @@ PORT = 8080
 REDIRECT_URI = f"http://{SERVER}:{PORT}"
 CONFIG_FILE = './config.yaml'
 
+
 def main():
     ga_config = get_config(CONFIG_FILE)
     # If YAML values are not filled out, return and display error
     if None in (ga_config['client_id'], ga_config['client_secret'], ga_config['login_customer_id'], ga_config['developer_token']):
-        raise Exception("Not all required parameters are configured in config.yaml. Refer to README for instructions.")
+        raise Exception(
+            "Not all required parameters are configured in config.yaml. Refer to README for instructions.")
 
     flow = Flow.from_client_config({
         "installed": {

@@ -26,9 +26,9 @@ logging.basicConfig(filename=_LOGS_PATH,
 parser = ArgumentParser(
     description='Extract keywords and negative keywords from your search terms.')
 parser.add_argument('-e', '--upload-negatives', default=False, action='store_true',
-                   help='Use this flag if you want to automatically add the negative keywords to the ad groups.')
+                    help='Use this flag if you want to automatically add the negative keywords to the ad groups.')
 parser.add_argument('-u', '--upload-negatives-from-sheet', default=False, action='store_true',
-                   help='Use this flag to read the "exclusions" sheet and upload them as negative keywords. This will do no other processing.')
+                    help='Use this flag to read the "exclusions" sheet and upload them as negative keywords. This will do no other processing.')
 arguments = parser.parse_args()
 
 
@@ -55,7 +55,8 @@ def upload_from_sheets(client, sheet_handler):
 
 def main(client: GoogleAdsClient, mcc_id: str, config: Dict[str, Any], sheet_handler: SheetsInteractor, auto_upload_negatives: bool):
 
-    run_settings = RunSettings.from_sheet_read(sheet_handler.read_from_spreadsheet(_THRESHOLDS_RANGE))
+    run_settings = RunSettings.from_sheet_read(
+        sheet_handler.read_from_spreadsheet(_THRESHOLDS_RANGE))
 
     if not run_settings.accounts:
         run_settings.accounts = AccountsBuilder(client).get_accounts()
@@ -65,13 +66,14 @@ def main(client: GoogleAdsClient, mcc_id: str, config: Dict[str, Any], sheet_han
     keyword_recommendations = {}
     exclusion_recommendations = {}
     for account in run_settings.accounts:
-        search_terms =_get_search_terms(client, run_settings, account)
-        exclusions = _dedup_and_get_exclusions(client, run_settings, account, search_terms)
+        search_terms = _get_search_terms(client, run_settings, account)
+        exclusions = _dedup_and_get_exclusions(
+            client, run_settings, account, search_terms)
         if search_terms:
             keyword_recommendations[account] = search_terms
         if exclusions:
             exclusion_recommendations[account] = exclusions
-    
+
     pprint(keyword_recommendations)
     pprint(exclusion_recommendations)
 
@@ -79,9 +81,10 @@ def main(client: GoogleAdsClient, mcc_id: str, config: Dict[str, Any], sheet_han
     if auto_upload_negatives:
         for account, neg_kw in exclusion_recommendations.items():
             _add_negative_keywords(client, account, neg_kw)
-    
+
     flattened_kw_recommendations = flatten_data(keyword_recommendations)
-    flattened_exclusion_recommendations = flatten_data(exclusion_recommendations)
+    flattened_exclusion_recommendations = flatten_data(
+        exclusion_recommendations)
 
     sheet_handler.write_to_spreadsheet(
         {_KEYWORDS_SHEET: flattened_kw_recommendations,
@@ -94,12 +97,12 @@ if __name__ == "__main__":
         auto_upload_negatives = arguments.upload_negatives
         upload_negatives_from_sheets = arguments.upload_negatives_from_sheet
 
-        config = auth.get_config(CONFIG_FILE) 
+        config = auth.get_config(CONFIG_FILE)
         # Check if client needs to set refresh_token in YAML.
         # If so, run auth_utils.py.
         if config['refresh_token'] == None:
             auth.main()
-        
+
         try:
             google_ads_client = GoogleAdsClient.load_from_storage(CONFIG_FILE)
         except:
@@ -108,12 +111,14 @@ if __name__ == "__main__":
 
         mcc_id = str(config['login_customer_id'])
         sheets_service = get_sheets_service(config)
-        sheet_handler = SheetsInteractor(sheets_service, config['spreadsheet_url'])
-        
+        sheet_handler = SheetsInteractor(
+            sheets_service, config['spreadsheet_url'])
+
         if upload_negatives_from_sheets:
             upload_from_sheets(google_ads_client, sheet_handler)
 
-        main(google_ads_client, mcc_id, config, sheet_handler ,auto_upload_negatives)
+        main(google_ads_client, mcc_id, config,
+             sheet_handler, auto_upload_negatives)
 
     except Exception as e:
         logging.exception(e)
