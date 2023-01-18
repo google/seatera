@@ -64,7 +64,8 @@ def main():
         ga_config['refresh_token'] = flow.credentials.refresh_token
         with open(CONFIG_FILE, 'w') as f:
             yaml.dump(ga_config, f)
-        print("Refresh token updated in google-ads.yaml")
+        print("Refresh token updated and saved")
+        return flow.credentials.refresh_token
     except Exception as e:
         print("could not write refresh token to google-ads.yaml file")
         print(e)

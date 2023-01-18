@@ -38,7 +38,8 @@ class SearchTermBuilder(Builder):
             FROM 
                 search_term_view 
             WHERE 
-                campaign.advertising_channel_type = 'SEARCH' 
+                campaign.advertising_channel_type = 'SEARCH'
+                AND search_term_view.status = 'NONE'
                 AND metrics.clicks >= {thresholds['clicks']} 
                 AND metrics.impressions >= {thresholds['impressions']} 
                 AND metrics.ctr > {thresholds['ctr']} 
@@ -95,7 +96,8 @@ class KeywordDedupingBuilder(Builder):
         rows = self._get_rows('''
         SELECT
             ad_group_criterion.keyword.text,
-            ad_group.id
+            ad_group.id,
+            ad_group_criterion.negative 
         FROM 
             ad_group_criterion
         WHERE 

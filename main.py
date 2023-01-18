@@ -101,8 +101,8 @@ if __name__ == "__main__":
         # Check if client needs to set refresh_token in YAML.
         # If so, run auth_utils.py.
         if config['refresh_token'] == None:
-            auth.main()
-
+            config['refresh_token'] = auth.main()
+        
         try:
             google_ads_client = GoogleAdsClient.load_from_storage(CONFIG_FILE)
         except:
