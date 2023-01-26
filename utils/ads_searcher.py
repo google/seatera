@@ -52,6 +52,7 @@ class SearchTermBuilder(Builder):
         search_terms = {}
         for batch in rows:
             for row in batch.results:
+                row = row._pb
                 try:
                     search_terms[row.search_term_view.search_term][row.ad_group.id] = {
                         'account_id': row.customer.id,
@@ -113,6 +114,7 @@ class KeywordDedupingBuilder(Builder):
         keywords = {}
         for batch in rows:
             for row in batch.results:
+                row = row._pb
                 # if keyword is not in search term dict, move on to the next one
                 if not search_terms.get(row.ad_group_criterion.keyword.text):
                     continue
@@ -164,6 +166,7 @@ class AccountsBuilder(Builder):
         rows = self._get_rows(query)
         for batch in rows:
             for row in batch.results:
+                row = row._pb
                 accounts.append(str(row.customer_client.id))
 
         return accounts
