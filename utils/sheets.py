@@ -15,7 +15,9 @@ _HEADER = ['keyword', 'account name', 'account id', 'campaign name',
            'campaign id', 'adgroup name', 'adgroup id', 'clicks', 'impressions', 'conversions', 'cost', 'ctr']
 _RUN_DATETIME = datetime.now()
 _RUN_METADATA = f'Last run was completed on {_RUN_DATETIME}'
-
+_KEYWORDS_SHEET = 'Keywords'
+_EXCLUSIONS_SHEET = 'Exclusions'
+_SS_NAME = 'SeaTerA'
 
 class SheetsInteractor:
     def __init__(self, service, spreadsheet_url):
@@ -62,6 +64,29 @@ class SheetsInteractor:
             spreadsheetId=self.spreadsheet_id, range=range).execute()
         values = results.get('values', [])
         return values
+
+    def create_new_spreadsheet(self):
+        spreadsheet_title = _SS_NAME
+        worksheet_names = [_EXCLUSIONS_SHEET,
+                           _KEYWORDS_SHEET]
+        sheets = []
+        for name in worksheet_names:
+            worksheet = {
+                'properties': {
+                    'title': name
+                }
+            }
+            sheets.append(worksheet)
+
+        spreadsheet = {
+            'properties': {
+                'title': spreadsheet_title
+                },
+            'sheets': sheets
+        }
+        ss = self.service.spreadsheets().create(body=spreadsheet,
+                                                fields='spreadsheetUrl').execute()
+        return ss.get('spreadsheetUrl')
 
     def _clear_sheet(self, sheet_name):
         """Helper function to clear output sheet before writing to it."""
