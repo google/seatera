@@ -17,7 +17,7 @@ class Config:
         self.developer_token = config.get('developer_token', '')
         self.login_customer_id = config.get('login_customer_id', '')
         self.spreadsheet_url = config.get('spreadsheet_url', '')
-        self.use_proto = True
+        self.use_proto_plus = True
 
 
     def load_config_from_file(self):

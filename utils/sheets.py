@@ -65,29 +65,6 @@ class SheetsInteractor:
         values = results.get('values', [])
         return values
 
-    def create_new_spreadsheet(self):
-        spreadsheet_title = _SS_NAME
-        worksheet_names = [_EXCLUSIONS_SHEET,
-                           _KEYWORDS_SHEET]
-        sheets = []
-        for name in worksheet_names:
-            worksheet = {
-                'properties': {
-                    'title': name
-                }
-            }
-            sheets.append(worksheet)
-
-        spreadsheet = {
-            'properties': {
-                'title': spreadsheet_title
-                },
-            'sheets': sheets
-        }
-        ss = self.service.spreadsheets().create(body=spreadsheet,
-                                                fields='spreadsheetUrl').execute()
-        return ss.get('spreadsheetUrl')
-
     def _clear_sheet(self, sheet_name):
         """Helper function to clear output sheet before writing to it."""
         range_name = sheet_name + '!A:Z'
@@ -111,6 +88,30 @@ def get_sheets_service(config: Dict[str, Any]):
     service = build(_SHEETS_SERVICE_NAME,
                     _SHEETS_SERVICE_VERSION, credentials=creds)
     return service
+
+
+def create_new_spreadsheet(sheet_service):
+    spreadsheet_title = _SS_NAME
+    worksheet_names = [_EXCLUSIONS_SHEET,
+                        _KEYWORDS_SHEET]
+    sheets = []
+    for name in worksheet_names:
+        worksheet = {
+            'properties': {
+                'title': name
+            }
+        }
+        sheets.append(worksheet)
+
+    spreadsheet = {
+        'properties': {
+            'title': spreadsheet_title
+            },
+        'sheets': sheets
+    }
+    ss = sheet_service.spreadsheets().create(body=spreadsheet,
+                                            fields='spreadsheetUrl').execute()
+    return ss.get('spreadsheetUrl')
 
 
 def flatten_data(dict: Dict[str, Any]) -> List[List[Any]]:

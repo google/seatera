@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Any
 from dateutil.parser import parse
 
 
@@ -46,6 +46,18 @@ class RunSettings:
                 thresholds[key] = value
 
         return RunSettings(thresholds, start_date, end_date, accounts)
+
+    @staticmethod
+    def from_dict(input:Dict[Any, Any]):
+        thresholds = {
+            'clicks': input.get('clicks', 0),
+            'conversions': input.get('conversions', 0),
+            'impressions': input.get('impressions', 0),
+            'cost': input.get('cost', 0),
+            'ctr': input.get('ctr', 0)
+        }
+
+        return RunSettings(thresholds=thresholds, start_date=input['start_date'], end_date=input['end_date'], accounts=input.get('accounts', []))
 
     def __repr__(self) -> str:
         return f'RunSettings("{self.thresholds}", "{self.start_date}", "{self.end_date}", "{self.accounts}")'

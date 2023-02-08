@@ -149,7 +149,7 @@ class AccountsBuilder(Builder):
         super().__init__(client, client.login_customer_id)
         self._client = client
 
-    def get_accounts(self):
+    def get_accounts(self, with_names=False):
         """Used to get all client accounts using API"""
         accounts = []
         query = '''
@@ -167,6 +167,9 @@ class AccountsBuilder(Builder):
         for batch in rows:
             for row in batch.results:
                 row = row._pb
-                accounts.append(str(row.customer_client.id))
+                account = str(row.customer_client.id)
+                if with_names:
+                    account += ' - ' + str(row.customer_client.descriptive_name)
+                accounts.append(account)
 
         return accounts

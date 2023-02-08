@@ -5,10 +5,11 @@ from argparse import ArgumentParser
 from pathlib import Path
 from pprint import pprint
 from utils.auth import CONFIG_FILE, SCOPES
-from utils.sheets import SheetsInteractor, get_sheets_service, flatten_data
+from utils.sheets import SheetsInteractor, get_sheets_service, create_new_spreadsheet, flatten_data
 from utils.ads_searcher import AccountsBuilder, SearchTermBuilder, KeywordDedupingBuilder
 from utils.ads_mutator import NegativeKeywordsUploader
 from utils.entities import RunSettings
+from utils.config import Config
 from typing import Dict, Any, Optional, Union
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
@@ -53,10 +54,36 @@ def upload_from_sheets(client, sheet_handler):
     pass
 
 
-def main(client: GoogleAdsClient, mcc_id: str, config: Dict[str, Any], sheet_handler: SheetsInteractor, auto_upload_negatives: bool):
+def run_from_ui(params: Dict[str, str], config: Config):
+    # Temp function to trigger the run from UI. For when we want to keep both running options
+    sheets_service = get_sheets_service(config.__dict__)
+    if not config.spreadsheet_url:
+        config.spreadsheet_url = create_new_spreadsheet(sheets_service)
+        config.save_to_file()
+    sheets_handler = SheetsInteractor(sheets_service, config.spreadsheet_url)
+    google_ads_client = GoogleAdsClient.load_from_storage(CONFIG_FILE)
 
-    run_settings = RunSettings.from_sheet_read(
-        sheet_handler.read_from_spreadsheet(_THRESHOLDS_RANGE))
+    main(google_ads_client, config.login_customer_id,
+         config, sheets_handler, params, False)
+
+
+def get_accounts_for_ui():
+    google_ads_client = GoogleAdsClient.load_from_storage(CONFIG_FILE)
+    accounts = AccountsBuilder(google_ads_client).get_accounts(with_names=True)
+    return accounts
+
+def main(client: GoogleAdsClient,
+         mcc_id: str,
+         config: Dict[str, Any],
+         sheet_handler: SheetsInteractor,
+         params: Dict[Any, Any] = None,
+         auto_upload_negatives: bool = False):
+
+    if params:
+        run_settings = RunSettings.from_dict(params)
+    else:
+        run_settings = RunSettings.from_sheet_read(
+            sheet_handler.read_from_spreadsheet(_THRESHOLDS_RANGE))
 
     if not run_settings.accounts:
         run_settings.accounts = AccountsBuilder(client).get_accounts()
@@ -102,7 +129,7 @@ if __name__ == "__main__":
         # If so, run auth_utils.py.
         if config['refresh_token'] == None:
             config['refresh_token'] = auth.main()
-        
+
         try:
             google_ads_client = GoogleAdsClient.load_from_storage(CONFIG_FILE)
         except:
