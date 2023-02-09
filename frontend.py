@@ -11,7 +11,7 @@ OAUTH_HELP = """Refer to
 
 
 def validate_config(config):
-    if config.refresh_token:
+    if config.valid_config:
         st.session_state.valid_config = True
     else:
         st.session_state.valid_config = False
@@ -29,19 +29,17 @@ def initialize_session_state():
 def authenticate(config_params):
     st.session_state.config.client_id = config_params['client_id']
     st.session_state.config.client_secret = config_params['client_secret']
+    st.session_state.config.refresh_token = config_params['refresh_token']
     st.session_state.config.developer_token = config_params['developer_token']
     st.session_state.config.login_customer_id = config_params['login_customer_id']
-    
-    config = st.session_state.config
-
-    config.refresh_token = auth.main(config_params)
-    config.save_to_file()
-    
-    st.session_state.config = config
+   
+    st.session_state.config.check_valid_config()
+    st.session_state.valid_config = True 
+    st.session_state.config.save_to_file()
 
 def reset_config():
-    st.session_state.valid_confog=False
-    st.session_state.config.refresh_token = ''
+    st.session_state.valid_config=False
+    st.session_state.config.valid_config = False
 
 def update_btn_state():
     # Needed to cloes settings expander before starting to process
@@ -92,11 +90,13 @@ with st.expander("**Authentication**", expanded=not st.session_state.valid_confi
         st.info(f"Credentials are not set. {OAUTH_HELP}", icon="⚠️")
         client_id = st.text_input("Client ID", value=value_placeholder(config.client_id))
         client_secret = st.text_input("Client Secret", value=value_placeholder(config.client_secret))
+        refresh_token = st.text_input("Refresh Token", value=value_placeholder(config.refresh_token))
         developer_token = st.text_input("Developer Token", value=value_placeholder(config.developer_token))
         mcc_id = st.text_input("MCC ID", value=value_placeholder(config.login_customer_id))
-        login_btn = st.button("Log In", type='primary',on_click=authenticate, args=[{
+        login_btn = st.button("Save", type='primary',on_click=authenticate, args=[{
             'client_id': client_id,
             'client_secret': client_secret,
+            'refresh_token': refresh_token,
             'developer_token': developer_token,
             'login_customer_id': mcc_id
         }])
@@ -104,6 +104,7 @@ with st.expander("**Authentication**", expanded=not st.session_state.valid_confi
         st.success(f'Credentials succesfully set ', icon="✅")
         st.text_input("Client ID", value=config.client_id, disabled= True)
         st.text_input("Client Secret", value=config.client_secret, disabled= True)
+        st.text_input("Refresh Token", value=config.refresh_token, disabled=True)
         st.text_input("Developer Token", value=config.developer_token, disabled= True)
         st.text_input("MCC ID", value=config.login_customer_id, disabled= True)
         edit = st.button("Edit Credentials", on_click=reset_config)
