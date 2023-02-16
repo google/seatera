@@ -2,6 +2,7 @@ client_id:  #OAuth2 client ID
 client_secret:  #OAuth2 client secret
 developer_token: #Your developer token
 login_customer_id: #MCC ID 
-refresh_token: None
+refresh_token: 
 spreadsheet_url: #URL of your copy of the spreadsheet
 use_proto_plus: true
+valid_config: false

@@ -20,41 +20,20 @@ The script will populate two seperate sheets:
 
 1. [A Google Ads Developer token](https://developers.google.com/google-ads/api/docs/first-call/dev-token#:~:text=A%20developer%20token%20from%20Google,SETTINGS%20%3E%20SETUP%20%3E%20API%20Center.)
 
-1. A GCP project 
+1. A new GCP project with billing attached
 
-1. Create [OAuth Credentials](https://console.cloud.google.com/apis/credentials/oauthclient) of type **Desktop**
+1. Create [OAuth Credentials](https://console.cloud.google.com/apis/credentials/oauthclient) of type **Web**
 
 1. [Enable Google ads API](https://developers.google.com/google-ads/api/docs/first-call/oauth-cloud-project#enable_the_in_your_project)
 1. Enable Sheets API
 
-1. Ask to join [this Google Group](https://groups.google.com/a/google.com/g/seatera-external/about)
-
-1. Make a copy of [this spraedsheet](https://docs.google.com/spreadsheets/d/1d6nSLFPgv28D-Ry18r-YSH1Zv9iBTz1ZbViJT2D0WEM/edit?resourcekey=0-hdKLYkBP7YLXEaiP-K6UqQ#gid=0)
 
 ## Installation
 
-0. Optional - Create a virtual environment
-    ```shell
-    python3 -m venv .venv
-    . .venv/bin/activate
-    ```
+1. Click the big blue button to deploy:
+   
+   [![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run)
 
-1. git clone the repository
-    ```shell
-    git clone https://professional-services.googlesource.com/solutions/seatera
-    ```
-
-1. CD into the folder and install dependencies - you might want to use venv 
-    ```shell
-    pip3 install -r requirements.txt
-    ```
-1. Fill in config.yaml with the following parameters:
-    * client id - your oauth2 client ID
-    * client secret - your oauth2 client secret
-    * developer token
-    * login_customer_id - your MCC account ID
-    * refresh_token - **Leave empty!**
-    * spreadsheet_url - the URL of your copy of the SeaTera spreadsheet
 
 ## Usage
 

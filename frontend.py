@@ -46,7 +46,7 @@ def update_btn_state():
     st.session_state.run_btn_clicked = True 
 
 def get_accounts_list():
-    st.session_state.accounts_for_ui = get_accounts_for_ui()
+    st.session_state.accounts_for_ui = get_accounts_for_ui(st.session_state.config)
 
 def value_placeholder(value):
     if value: return value
@@ -122,7 +122,9 @@ with st.expander("**Run Settings**", expanded=st.session_state.valid_config and 
         accounts_selected_explicit = st.multiselect("Choose Accounts", st.session_state.accounts_for_ui)
     
         st.session_state.accounts_selected = [x.split(' - ')[0] for x in accounts_selected_explicit]
-
+    
+    elif st.session_state.all_accounts == 'All Accounts':
+        st.session_state.accounts_selected = [] 
     # Dates picker
     start_date, end_date = st.columns(2)
     start_date.date_input("Start Date", key="start_date")

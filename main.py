@@ -61,20 +61,19 @@ def run_from_ui(params: Dict[str, str], config: Config):
         config.spreadsheet_url = create_new_spreadsheet(sheets_service)
         config.save_to_file()
     sheets_handler = SheetsInteractor(sheets_service, config.spreadsheet_url)
-    google_ads_client = GoogleAdsClient.load_from_storage(CONFIG_FILE)
+    google_ads_client = config.get_ads_client()
 
     main(google_ads_client, config.login_customer_id,
-         config, sheets_handler, params, False)
+         sheets_handler, params, auto_upload_negatives=False)
 
 
-def get_accounts_for_ui():
-    google_ads_client = GoogleAdsClient.load_from_storage(CONFIG_FILE)
+def get_accounts_for_ui(config: Config):
+    google_ads_client = config.get_ads_client()
     accounts = AccountsBuilder(google_ads_client).get_accounts(with_names=True)
     return accounts
 
 def main(client: GoogleAdsClient,
          mcc_id: str,
-         config: Dict[str, Any],
          sheet_handler: SheetsInteractor,
          params: Dict[Any, Any] = None,
          auto_upload_negatives: bool = False):
@@ -101,8 +100,8 @@ def main(client: GoogleAdsClient,
         if exclusions:
             exclusion_recommendations[account] = exclusions
 
-    pprint(keyword_recommendations)
-    pprint(exclusion_recommendations)
+    # pprint(keyword_recommendations)
+    # pprint(exclusion_recommendations)
 
     # If auto upload, iterate over exclusion dict and for each account add negative kws
     if auto_upload_negatives:
