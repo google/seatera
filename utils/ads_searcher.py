@@ -98,6 +98,8 @@ class KeywordDedupingBuilder(Builder):
         SELECT
             ad_group_criterion.keyword.text,
             ad_group.id,
+            ad_group.name,
+            campaign.name,
             ad_group_criterion.negative 
         FROM 
             ad_group_criterion
@@ -136,10 +138,30 @@ class KeywordDedupingBuilder(Builder):
             # If st ad groups remain, add their stats and kw to exclusion list.
             if st_stats:
                 exclusion_list[kw] = st_stats
-
+                exclusion_list[kw]['prominent'] = self._get_prominent_existing_location(kw)
             search_terms.pop(kw)
 
         return exclusion_list
+
+    def _get_prominent_existing_location(self, kw):
+        """For given KW, get the ad group and campaign names where this KW has the largest cost"""
+        rows = self._get_rows(f'''
+            SELECT 
+                campaign.name, 
+                ad_group.name,
+                metrics.cost_micros
+            FROM keyword_view 
+            WHERE 
+                ad_group_criterion.keyword.text = '{kw}' 
+            ORDER BY 
+                metrics.cost_micros DESC 
+            LIMIT 1 
+            ''')
+
+        for batch in rows:
+            for row in batch.results:
+                row = row._pb
+                return row.campaign.name + '~' + row.ad_group.name
 
 
 class AccountsBuilder(Builder):

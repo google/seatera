@@ -5,8 +5,6 @@ from google.ads.googleads.client import GoogleAdsClient
 import os
 import yaml
 
-# For local testing only
-# os.environ['bucket_name'] = 'seatera-seatera'
 
 BUCKET_NAME = os.getenv('bucket_name')
 CONFIG_FILE_NAME = 'config.yaml'

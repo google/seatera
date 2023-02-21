@@ -12,7 +12,7 @@ _SHEETS_SERVICE_VERSION = 'v4'
 _SHEETS_SERVICE_NAME = 'sheets'
 
 _HEADER = ['keyword', 'account name', 'account id', 'campaign name',
-           'campaign id', 'adgroup name', 'adgroup id', 'clicks', 'impressions', 'conversions', 'cost', 'ctr']
+           'campaign id', 'adgroup name', 'adgroup id','prominent adgroup', 'clicks', 'impressions', 'conversions', 'cost', 'ctr']
 _RUN_DATETIME = datetime.now()
 _RUN_METADATA = f'Last run was completed on {_RUN_DATETIME}'
 _KEYWORDS_SHEET = 'Keywords'
@@ -122,9 +122,11 @@ def flatten_data(dict: Dict[str, Any]) -> List[List[Any]]:
 
     for v in dict.values():
         for kw, data in v.items():
-            for stats in data.values():
-                row = [kw, stats['account'], stats['account_id'], stats['campaign'], stats['campaign_id'], stats['ad_group'], stats['ad_group_id'],
-                       stats['clicks'], stats['impressions'], stats['conversions'], stats['cost'], stats['ctr']]
+            prominent = data.get('prominent', '')
+            for key, stats in data.items():
+                if key != 'prominent':
+                    row = [kw, stats['account'], stats['account_id'], stats['campaign'], stats['campaign_id'], stats['ad_group'], stats['ad_group_id'],
+                        prominent, stats['clicks'], stats['impressions'], stats['conversions'], stats['cost'], stats['ctr']]
                 keyowrds_recs_values.append(row)
 
     return keyowrds_recs_values
