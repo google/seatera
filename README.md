@@ -22,7 +22,7 @@ The script will populate two seperate sheets:
 
 1. A new GCP project with billing attached
 
-1. Create [OAuth Credentials](https://console.cloud.google.com/apis/credentials/oauthclient) of type **Web**
+1. Create OAuth2 Credentials of type **Web** and refresh token with scopes **"Google Ads API"** and **"Google Sheets API"**. Follow instructions in [this video](https://www.youtube.com/watch?v=KFICa7Ngzng)
 
 1. [Enable Google ads API](https://developers.google.com/google-ads/api/docs/first-call/oauth-cloud-project#enable_the_in_your_project)
 1. Enable Sheets API
