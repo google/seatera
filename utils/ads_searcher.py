@@ -1,3 +1,16 @@
+# Copyright 2022 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 class Builder(object):
     def __init__(self, client, customer_id):
@@ -98,6 +111,8 @@ class KeywordDedupingBuilder(Builder):
         SELECT
             ad_group_criterion.keyword.text,
             ad_group.id,
+            ad_group.name,
+            campaign.name,
             ad_group_criterion.negative 
         FROM 
             ad_group_criterion
@@ -136,10 +151,30 @@ class KeywordDedupingBuilder(Builder):
             # If st ad groups remain, add their stats and kw to exclusion list.
             if st_stats:
                 exclusion_list[kw] = st_stats
-
+                exclusion_list[kw]['prominent'] = self._get_prominent_existing_location(kw)
             search_terms.pop(kw)
 
         return exclusion_list
+
+    def _get_prominent_existing_location(self, kw):
+        """For given KW, get the ad group and campaign names where this KW has the largest cost"""
+        rows = self._get_rows(f'''
+            SELECT 
+                campaign.name, 
+                ad_group.name,
+                metrics.cost_micros
+            FROM keyword_view 
+            WHERE 
+                ad_group_criterion.keyword.text = '{kw}' 
+            ORDER BY 
+                metrics.cost_micros DESC 
+            LIMIT 1 
+            ''')
+
+        for batch in rows:
+            for row in batch.results:
+                row = row._pb
+                return row.campaign.name + '~' + row.ad_group.name
 
 
 class AccountsBuilder(Builder):
@@ -149,7 +184,7 @@ class AccountsBuilder(Builder):
         super().__init__(client, client.login_customer_id)
         self._client = client
 
-    def get_accounts(self):
+    def get_accounts(self, with_names=False):
         """Used to get all client accounts using API"""
         accounts = []
         query = '''
@@ -167,6 +202,9 @@ class AccountsBuilder(Builder):
         for batch in rows:
             for row in batch.results:
                 row = row._pb
-                accounts.append(str(row.customer_client.id))
+                account = str(row.customer_client.id)
+                if with_names:
+                    account += ' - ' + str(row.customer_client.descriptive_name)
+                accounts.append(account)
 
         return accounts

@@ -1,3 +1,17 @@
+# Copyright 2022 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # This file generates a refresh token to use with the Google Ads API, and populates
 # it inside config.yaml.
 
@@ -20,10 +34,11 @@ REDIRECT_URI = f"http://{SERVER}:{PORT}"
 CONFIG_FILE = './config.yaml'
 
 
-def main():
-    ga_config = get_config(CONFIG_FILE)
+def main(ga_config=None):
+    if not ga_config:
+        ga_config = get_config(CONFIG_FILE)
     # If YAML values are not filled out, return and display error
-    if None in (ga_config['client_id'], ga_config['client_secret'], ga_config['login_customer_id'], ga_config['developer_token']):
+    if None in (ga_config.get('client_id'), ga_config.get('client_secret'), ga_config.get('login_customer_id'), ga_config.get('developer_token')):
         raise Exception(
             "Not all required parameters are configured in config.yaml. Refer to README for instructions.")
 

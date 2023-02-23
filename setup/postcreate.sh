@@ -12,11 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-client_id:  #OAuth2 client ID  
-client_secret:  #OAuth2 client secret
-developer_token: #Your developer token
-login_customer_id: #MCC ID 
-refresh_token: 
-spreadsheet_url: #URL of your copy of the spreadsheet
-use_proto_plus: true
-valid_config: false
+echo "Setting bucket env variable.." 
+gcloud run services update seatera --update-env-vars bucket_name=${GOOGLE_CLOUD_PROJECT}-seatera --region=${GOOGLE_CLOUD_REGION}

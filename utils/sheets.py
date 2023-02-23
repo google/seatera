@@ -1,3 +1,17 @@
+# Copyright 2022 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import re
 import logging
 from typing import List, Any, Dict
@@ -12,10 +26,12 @@ _SHEETS_SERVICE_VERSION = 'v4'
 _SHEETS_SERVICE_NAME = 'sheets'
 
 _HEADER = ['keyword', 'account name', 'account id', 'campaign name',
-           'campaign id', 'adgroup name', 'adgroup id', 'clicks', 'impressions', 'conversions', 'cost', 'ctr']
+           'campaign id', 'adgroup name', 'adgroup id','prominent adgroup', 'clicks', 'impressions', 'conversions', 'cost', 'ctr']
 _RUN_DATETIME = datetime.now()
 _RUN_METADATA = f'Last run was completed on {_RUN_DATETIME}'
-
+_KEYWORDS_SHEET = 'Keywords'
+_EXCLUSIONS_SHEET = 'Exclusions'
+_SS_NAME = 'SeaTerA'
 
 class SheetsInteractor:
     def __init__(self, service, spreadsheet_url):
@@ -88,6 +104,30 @@ def get_sheets_service(config: Dict[str, Any]):
     return service
 
 
+def create_new_spreadsheet(sheet_service):
+    spreadsheet_title = _SS_NAME
+    worksheet_names = [_EXCLUSIONS_SHEET,
+                        _KEYWORDS_SHEET]
+    sheets = []
+    for name in worksheet_names:
+        worksheet = {
+            'properties': {
+                'title': name
+            }
+        }
+        sheets.append(worksheet)
+
+    spreadsheet = {
+        'properties': {
+            'title': spreadsheet_title
+            },
+        'sheets': sheets
+    }
+    ss = sheet_service.spreadsheets().create(body=spreadsheet,
+                                            fields='spreadsheetUrl').execute()
+    return ss.get('spreadsheetUrl')
+
+
 def flatten_data(dict: Dict[str, Any]) -> List[List[Any]]:
     row_len = len(_HEADER)
     metadata_row = ['' for i in range(row_len)]
@@ -96,9 +136,11 @@ def flatten_data(dict: Dict[str, Any]) -> List[List[Any]]:
 
     for v in dict.values():
         for kw, data in v.items():
-            for stats in data.values():
-                row = [kw, stats['account'], stats['account_id'], stats['campaign'], stats['campaign_id'], stats['ad_group'], stats['ad_group_id'],
-                       stats['clicks'], stats['impressions'], stats['conversions'], stats['cost'], stats['ctr']]
+            prominent = data.get('prominent', '')
+            for key, stats in data.items():
+                if key != 'prominent':
+                    row = [kw, stats['account'], stats['account_id'], stats['campaign'], stats['campaign_id'], stats['ad_group'], stats['ad_group_id'],
+                        prominent, stats['clicks'], stats['impressions'], stats['conversions'], stats['cost'], stats['ctr']]
                 keyowrds_recs_values.append(row)
 
     return keyowrds_recs_values

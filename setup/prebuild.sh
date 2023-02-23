@@ -12,11 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-client_id:  #OAuth2 client ID  
-client_secret:  #OAuth2 client secret
-developer_token: #Your developer token
-login_customer_id: #MCC ID 
-refresh_token: 
-spreadsheet_url: #URL of your copy of the spreadsheet
-use_proto_plus: true
-valid_config: false
+echo "Setting Project ID: ${GOOGLE_CLOUD_PROJECT}"
+gcloud config set project ${GOOGLE_CLOUD_PROJECT}
+
+echo "Enabling Cloud Storage service..."
+gcloud services enable storage-component.googleapis.com 
+
+echo "Creating cloud storage bucket..."
+gcloud alpha storage buckets create gs://${GOOGLE_CLOUD_PROJECT}-seatera --project=${GOOGLE_CLOUD_PROJECT}
+
+echo "Uploading config.yaml to cloud storage..."
+gcloud alpha storage cp ./config.yaml gs://${GOOGLE_CLOUD_PROJECT}-seatera

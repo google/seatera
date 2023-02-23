@@ -1,4 +1,18 @@
-from typing import List, Dict
+# Copyright 2022 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from typing import List, Dict, Any
 from dateutil.parser import parse
 
 
@@ -46,6 +60,18 @@ class RunSettings:
                 thresholds[key] = value
 
         return RunSettings(thresholds, start_date, end_date, accounts)
+
+    @staticmethod
+    def from_dict(input:Dict[Any, Any]):
+        thresholds = {
+            'clicks': input.get('clicks', 0),
+            'conversions': input.get('conversions', 0),
+            'impressions': input.get('impressions', 0),
+            'cost': input.get('cost', 0),
+            'ctr': input.get('ctr', 0)
+        }
+
+        return RunSettings(thresholds=thresholds, start_date=input['start_date'], end_date=input['end_date'], accounts=input.get('accounts', []))
 
     def __repr__(self) -> str:
         return f'RunSettings("{self.thresholds}", "{self.start_date}", "{self.end_date}", "{self.accounts}")'
