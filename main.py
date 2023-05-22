@@ -15,7 +15,6 @@
 import sys
 import logging
 import utils.auth as auth
-from argparse import ArgumentParser
 from pathlib import Path
 from pprint import pprint
 from utils.auth import CONFIG_FILE, SCOPES
@@ -27,9 +26,7 @@ from utils.config import Config
 from typing import Dict, Any, Optional, Union
 from google.ads.googleads.client import GoogleAdsClient
 from google.ads.googleads.errors import GoogleAdsException
-from time import time
 
-_THRESHOLDS_RANGE = 'Thresholds!A2:B12'
 _LOGS_PATH = Path('./script.log')
 _KEYWORDS_SHEET = 'Keywords'
 _EXCLUSIONS_SHEET = 'Exclusions'
@@ -38,13 +35,6 @@ logging.basicConfig(filename=_LOGS_PATH,
                     level=logging.INFO,
                     format='%(asctime)s:%(levelname)s:%(message)s')
 
-parser = ArgumentParser(
-    description='Extract keywords and negative keywords from your search terms.')
-parser.add_argument('-e', '--upload-negatives', default=False, action='store_true',
-                    help='Use this flag if you want to automatically add the negative keywords to the ad groups.')
-parser.add_argument('-u', '--upload-negatives-from-sheet', default=False, action='store_true',
-                    help='Use this flag to read the "exclusions" sheet and upload them as negative keywords. This will do no other processing.')
-arguments = parser.parse_args()
 
 
 def _get_search_terms(client: GoogleAdsClient, run_settings: RunSettings, account: str) -> Dict[str, Dict[str, Any]]:
@@ -92,11 +82,8 @@ def main(client: GoogleAdsClient,
          params: Dict[Any, Any] = None,
          auto_upload_negatives: bool = False):
 
-    if params:
-        run_settings = RunSettings.from_dict(params)
-    else:
-        run_settings = RunSettings.from_sheet_read(
-            sheet_handler.read_from_spreadsheet(_THRESHOLDS_RANGE))
+
+    run_settings = RunSettings.from_dict(params)
 
     if not run_settings.accounts:
         run_settings.accounts = AccountsBuilder(client).get_accounts()
@@ -131,39 +118,3 @@ def main(client: GoogleAdsClient,
          _EXCLUSIONS_SHEET: flattened_exclusion_recommendations})
 
 
-if __name__ == "__main__":
-    start = time()
-    try:
-        auto_upload_negatives = arguments.upload_negatives
-        upload_negatives_from_sheets = arguments.upload_negatives_from_sheet
-
-        config = auth.get_config(CONFIG_FILE)
-        # Check if client needs to set refresh_token in YAML.
-        # If so, run auth_utils.py.
-        if config['refresh_token'] == None:
-            config['refresh_token'] = auth.main()
-
-        try:
-            google_ads_client = GoogleAdsClient.load_from_storage(CONFIG_FILE)
-        except:
-            print('Refer to README.md and fill out values in config.yaml')
-            sys.exit(1)
-
-        mcc_id = str(config['login_customer_id'])
-        sheets_service = get_sheets_service(config)
-        sheet_handler = SheetsInteractor(
-            sheets_service, config['spreadsheet_url'])
-
-        if upload_negatives_from_sheets:
-            upload_from_sheets(google_ads_client, sheet_handler)
-
-        main(google_ads_client, mcc_id, config,
-             sheet_handler, auto_upload_negatives)
-
-    except Exception as e:
-        logging.exception(e)
-        pprint('Run did not complete succesfully. Refer to logs.')
-    finally:
-        end = time()
-        total_time = end - start
-        print("\n" + "Total run time: " + str(total_time))
