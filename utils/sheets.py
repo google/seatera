@@ -132,7 +132,7 @@ def flatten_data(dict: Dict[str, Any]) -> List[List[Any]]:
     row_len = len(_HEADER)
     metadata_row = ['' for i in range(row_len)]
     metadata_row[0] = _RUN_METADATA
-    keyowrds_recs_values = [metadata_row, _HEADER]
+    results = [metadata_row, _HEADER]
 
     for v in dict.values():
         for kw, data in v.items():
@@ -141,10 +141,6 @@ def flatten_data(dict: Dict[str, Any]) -> List[List[Any]]:
                 if key != 'prominent':
                     row = [kw, stats['account'], stats['account_id'], stats['campaign'], stats['campaign_id'], stats['ad_group'], stats['ad_group_id'],
                         prominent, stats['clicks'], stats['impressions'], stats['conversions'], stats['cost'], stats['ctr']]
-                keyowrds_recs_values.append(row)
+                    results.append(row)
 
-    return keyowrds_recs_values
-
-
-def flatten_exclusion_recommendation(ex_recs: Dict[str, Any]) -> List[List[Any]]:
-    pass
+    return results

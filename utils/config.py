@@ -16,6 +16,7 @@ from yaml.loader import SafeLoader
 from copy import deepcopy
 from google.cloud import storage
 from google.ads.googleads.client import GoogleAdsClient
+from typing import Dict
 import os
 import yaml
 
@@ -28,6 +29,8 @@ _ADS_API_VERSION = 'v13'
 class Config:
     def __init__(self) -> None:
         self.file_path = CONFIG_FILE_PATH
+        self.storage_client = storage.Client()
+        self.bucket = self.storage_client.bucket(BUCKET_NAME)
         config = self.load_config_from_file()
         if config is None:
             config = {}
@@ -47,27 +50,36 @@ class Config:
             self.valid_config = False
 
     def load_config_from_file(self):
-        storage_clien = storage.Client()
-        bucket = storage_clien.bucket(BUCKET_NAME)
-        blob = bucket.blob(CONFIG_FILE_NAME)
-
-        with blob.open() as f:
-            config = yaml.load(f, Loader=SafeLoader)
+        try:
+            blob = self.bucket.blob(CONFIG_FILE_NAME)
+            with blob.open() as f:
+                config = yaml.load(f, Loader=SafeLoader)
+        except Exception as e:
+            print(str(e))
+            return None
         return config
 
     def save_to_file(self):
         try:
-            config = deepcopy(self.__dict__)
-            del config['file_path']
-            storage_client = storage.Client()
-            bucket = storage_client.bucket(BUCKET_NAME)
-            blob = bucket.blob(CONFIG_FILE_NAME)
+            config = deepcopy(self.to_dict())
+            blob = self.bucket.blob(CONFIG_FILE_NAME)
             with blob.open('w') as f:
                 yaml.dump(config, f)
             print(f"Configurations updated in {self.file_path}")
         except Exception as e:
             print(f"Could not write configurations to {self.file_path} file")
             print(e)
+
+    def to_dict(self) -> Dict[str, str]:
+        """ Return the core attributes of the object as dict"""
+        return {
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
+                "refresh_token": self.refresh_token,
+                "developer_token": self.developer_token,
+                "login_customer_id": self.login_customer_id,
+                "spreadsheet_url": self.spreadsheet_url
+        }
 
     def get_ads_client(self):
         return GoogleAdsClient.load_from_dict({
