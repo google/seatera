@@ -165,7 +165,7 @@ class KeywordDedupingBuilder(Builder):
                 metrics.cost_micros
             FROM keyword_view 
             WHERE 
-                ad_group_criterion.keyword.text = '{kw}' 
+                ad_group_criterion.keyword.text = "{kw}" 
             ORDER BY 
                 metrics.cost_micros DESC 
             LIMIT 1 
