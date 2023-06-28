@@ -21,8 +21,8 @@ class RunSettings:
         if not start_date or not end_date:
             raise ValueError(
                 "Start and end dates must be provided in settings sheet.")
-        if parse(start_date) >= parse(end_date):
-            raise ValueError("End Date must be later than Start Date")
+        if parse(start_date) > parse(end_date):
+            raise ValueError("End Date must be the same or later than Start Date")
 
         self.thresholds = thresholds
         self.start_date = parse(start_date).strftime("%Y-%m-%d")
