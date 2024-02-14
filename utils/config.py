@@ -24,7 +24,6 @@ import yaml
 BUCKET_NAME = os.getenv('bucket_name')
 CONFIG_FILE_NAME = 'config.yaml'
 CONFIG_FILE_PATH = BUCKET_NAME +  '/' + CONFIG_FILE_NAME
-_ADS_API_VERSION = 'v13'
 
 class Config:
     def __init__(self) -> None:
@@ -89,4 +88,4 @@ class Config:
             'developer_token': self.developer_token,
             'refresh_token': self.refresh_token,
             'use_proto_plus': True,
-        }, version=_ADS_API_VERSION)
+        })
